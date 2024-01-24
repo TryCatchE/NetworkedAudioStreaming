@@ -10,22 +10,30 @@
 
 void audioDataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
-    if (pInput != NULL) {
-        // We're not recording, so you can optionally handle this case.
-        // You can leave this empty or add some code for handling playback-only scenarios.
+    ma_decoder* pDecoder = static_cast<ma_decoder*>(pDevice->pUserData);
+    if (pDecoder == NULL) {
+        memset(pOutput, 0, frameCount * ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels));
+        return;
     }
 
-    std::vector<char>* songBuffer = static_cast<std::vector<char>*>(pDevice->pUserData);
-    ma_uint64 totalFramesNeeded = frameCount * pDevice->playback.channels;
-    ma_uint64 framesToCopy = std::min(totalFramesNeeded, static_cast<ma_uint64>(songBuffer->size() / sizeof(float)));
+    // Read frames from the decoder
+    ma_uint64 framesRead;
+    ma_result result = ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount, &framesRead);
 
-    if (framesToCopy > 0) {
-        memcpy(pOutput, songBuffer->data(), framesToCopy * sizeof(float));
-        songBuffer->erase(songBuffer->begin(), songBuffer->begin() + framesToCopy * sizeof(float));
-    } else {
-        memset(pOutput, 0, totalFramesNeeded * sizeof(float));
+    // Check the result and handle any errors
+    if (result != MA_SUCCESS) {
+        // Error handling here
+        memset(pOutput, 0, frameCount * ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels));
+        return;
+    }
+
+    // If we didn't read enough frames, fill the rest of the buffer with silence
+    if (framesRead < frameCount) {
+        size_t bytesPerFrame = ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels);
+        memset((char*)pOutput + framesRead * bytesPerFrame, 0, (frameCount - framesRead) * bytesPerFrame);
     }
 }
+
 
 int main() {
     WSADATA wsaData;
@@ -103,7 +111,6 @@ int main() {
     ma_context context;
     ma_device device;
     ma_decoder decoder;
-
     result = ma_context_init(NULL, 0, NULL, &context);
     if (result != MA_SUCCESS) {
         std::cerr << "Failed to initialize miniaudio context" << std::endl;
@@ -113,22 +120,22 @@ int main() {
     // Initialize the decoder with the received song data
     result = ma_decoder_init_memory(song_buffer.data(), song_buffer.size(), NULL, &decoder);
     if (result != MA_SUCCESS) {
-        std::cerr << "Failed to initialize decoder. Error code: " << result << std::endl;
+        std::cerr << "Failed to initialize decoder." << std::endl;
         ma_context_uninit(&context);
         return 1;
     }
 
     // Initialize the audio device
     ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format = decoder.outputFormat;
+    deviceConfig.playback.format   = decoder.outputFormat;
     deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate = decoder.outputSampleRate;
-    deviceConfig.dataCallback = audioDataCallback;
-    deviceConfig.pUserData = &song_buffer;
+    deviceConfig.sampleRate       = decoder.outputSampleRate;
+    deviceConfig.dataCallback     = audioDataCallback;
+    deviceConfig.pUserData        = &decoder; // Pass decoder to the callback
 
     result = ma_device_init(&context, &deviceConfig, &device);
     if (result != MA_SUCCESS) {
-        std::cerr << "Failed to initialize audio device" << std::endl;
+        std::cerr << "Failed to initialize audio device." << std::endl;
         ma_decoder_uninit(&decoder);
         ma_context_uninit(&context);
         return 1;
@@ -137,7 +144,7 @@ int main() {
     // Start the audio playback
     result = ma_device_start(&device);
     if (result != MA_SUCCESS) {
-        std::cerr << "Failed to start audio device" << std::endl;
+        std::cerr << "Failed to start audio device." << std::endl;
         ma_device_uninit(&device);
         ma_decoder_uninit(&decoder);
         ma_context_uninit(&context);
