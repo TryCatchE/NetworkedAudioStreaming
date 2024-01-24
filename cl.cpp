@@ -99,7 +99,7 @@ int main() {
     closesocket(sock);
     WSACleanup();
 
-    // Initialize miniaudio
+    // Initialize Miniaudio
     ma_result result;
     ma_context context;
     ma_device device;
@@ -111,21 +111,21 @@ int main() {
         return 1;
     }
 
-    // Initialize the decoder
+    // Initialize the decoder with the received song data
     result = ma_decoder_init_memory(song_buffer.data(), song_buffer.size(), NULL, &decoder);
     if (result != MA_SUCCESS) {
-        std::cerr << "Failed to initialize decoder" << std::endl;
+        std::cerr << "Failed to initialize decoder. Error code: " << result << std::endl;
         ma_context_uninit(&context);
         return 1;
     }
 
     // Initialize the audio device
     ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format   = decoder.outputFormat;
+    deviceConfig.playback.format = decoder.outputFormat;
     deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate        = decoder.outputSampleRate;
-    deviceConfig.dataCallback      = audioDataCallback;
-    deviceConfig.pUserData         = &song_buffer;
+    deviceConfig.sampleRate = decoder.outputSampleRate;
+    deviceConfig.dataCallback = audioDataCallback;
+    deviceConfig.pUserData = &song_buffer;
 
     result = ma_device_init(&context, &deviceConfig, &device);
     if (result != MA_SUCCESS) {
@@ -145,15 +145,17 @@ int main() {
         return 1;
     }
 
-    // Wait for the audio to finish
-    while (ma_device_is_started(&device)) {
-        Sleep(100);
-    }
+    std::cout << "Press Enter to stop playing..." << std::endl;
+    std::cin.get(); // Wait for the user to press Enter
 
-    // Cleanup miniaudio
+    // Stop the audio playback
     ma_device_uninit(&device);
     ma_decoder_uninit(&decoder);
     ma_context_uninit(&context);
+
+    // Cleanup Winsock
+    closesocket(sock);
+    WSACleanup();
 
     return 0;
 }

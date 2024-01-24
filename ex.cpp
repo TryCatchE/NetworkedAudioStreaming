@@ -8,7 +8,6 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
-
 void initializeWinsock() {
     WSADATA wsaData;
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -24,8 +23,6 @@ std::map<std::string, std::string> valid_credentials = {
     {"user3", "password3"}
 };
 std::vector<std::string> songs = {"song1.wav", "song2.wav", "song3.wav"};
-
-
 
 void handleClient(SOCKET clientSocket) {
     char buffer[1024];
@@ -76,9 +73,8 @@ void handleClient(SOCKET clientSocket) {
         return;
     }
 
+    // Send the selected song in binary format
     std::string selectedSong = songs[selectedSongIndex];
-
-    // Open and send the selected song file to the client
     std::string songFilePath = "songs_folder/" + selectedSong;
     FILE* songFile = fopen(songFilePath.c_str(), "rb");
     if (!songFile) {
@@ -101,8 +97,6 @@ void handleClient(SOCKET clientSocket) {
 
     closesocket(clientSocket);
 }
-
-
 
 int main() {
     initializeWinsock();
