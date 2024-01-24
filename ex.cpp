@@ -5,6 +5,9 @@
 #include <vector>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -17,12 +20,47 @@ void initializeWinsock() {
     }
 }
 
+
+namespace fs = std::filesystem;
+
+std::vector<std::string> getSongsFromFolder(const std::string& folderPath) {
+    std::vector<std::string> songFiles;
+    for (const auto& entry : fs::directory_iterator(folderPath)) {
+        if (entry.is_regular_file()) {
+            songFiles.push_back(entry.path().filename().string());
+        }
+    }
+    return songFiles;
+}
+
 std::map<std::string, std::string> valid_credentials = {
     {"user1", "password1"},
     {"user2", "password2"},
     {"user3", "password3"}
 };
-std::vector<std::string> songs = {"song1.wav", "song2.wav", "song3.wav"};
+
+
+void sendAudioData(SOCKET clientSocket, const std::string& songFilePath) {
+    std::ifstream songFile(songFilePath, std::ios::binary);
+    if (!songFile) {
+        send(clientSocket, "Song not found", 14, 0);
+        return;
+    }
+
+    const int audioBufferSize = 4096;  // Adjust as needed
+    char audioBuffer[audioBufferSize];
+
+    while (!songFile.eof()) {
+        songFile.read(audioBuffer, audioBufferSize);
+        int bytesRead = static_cast<int>(songFile.gcount());
+        if (bytesRead <= 0) {
+            break;
+        }
+        send(clientSocket, audioBuffer, bytesRead, 0);
+    }
+
+    songFile.close();
+}
 
 void handleClient(SOCKET clientSocket) {
     char buffer[1024];
@@ -50,11 +88,12 @@ void handleClient(SOCKET clientSocket) {
     }
 
     // Send song list
-    std::string songList;
+    std::stringstream songList;
+    std::vector<std::string> songs = getSongsFromFolder("songs_folder");
     for (int i = 0; i < songs.size(); ++i) {
-        songList += std::to_string(i) + ". " + songs[i] + "\n";
+        songList << i << ". " << songs[i] << "\n";
     }
-    send(clientSocket, songList.c_str(), songList.size(), 0);
+    send(clientSocket, songList.str().c_str(), static_cast<int>(songList.str().size()), 0);
 
     // Receive song number from the client
     memset(buffer, 0, 1024);
@@ -76,24 +115,7 @@ void handleClient(SOCKET clientSocket) {
     // Send the selected song in binary format
     std::string selectedSong = songs[selectedSongIndex];
     std::string songFilePath = "songs_folder/" + selectedSong;
-    FILE* songFile = fopen(songFilePath.c_str(), "rb");
-    if (!songFile) {
-        send(clientSocket, "Song not found", 14, 0);
-        closesocket(clientSocket);
-        return;
-    }
-
-    char songBuffer[1024];
-    while (true) {
-        size_t bytesRead = fread(songBuffer, 1, sizeof(songBuffer), songFile);
-        if (bytesRead <= 0) {
-            break;
-        }
-        send(clientSocket, songBuffer, bytesRead, 0);
-    }
-
-    // Close the song file
-    fclose(songFile);
+    sendAudioData(clientSocket, songFilePath);
 
     closesocket(clientSocket);
 }

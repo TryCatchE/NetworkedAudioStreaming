@@ -27,7 +27,6 @@ void audioDataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma
     }
 }
 
-
 int main() {
     WSADATA wsaData;
     SOCKET sock;
@@ -153,11 +152,5 @@ int main() {
     ma_decoder_uninit(&decoder);
     ma_context_uninit(&context);
 
-    // Cleanup Winsock
-    closesocket(sock);
-    WSACleanup();
-
     return 0;
 }
-
-
