@@ -1,34 +1,33 @@
-Networked Audio Streaming Application
-This project consists of two code snippets that together create a simple networked audio streaming application. One snippet represents the client-side application responsible for selecting and playing songs, while the other represents the server-side application responsible for serving songs to clients.
+Networked Audio Streaming
 
-Client Application (client.cpp)
-The client application connects to the server and allows users to log in, select a song from the available list, and stream it for playback.
+This project consists of two code snippets: one for the client and one for the server, creating a simple networked audio streaming application.
 
-Requirements:
-Windows operating system
-Winsock library
-Miniaudio library
+Client Application (client.cpp):
+
+Connects to the server, logs in, selects a song from the available list, and streams it for playback.
+
 Usage:
-Compile the code with a C++ compiler.
-Run the compiled executable.
-Enter your username and password when prompted.
-Choose a song from the available list.
-Press Enter to start playing the selected song.
-Press Enter again to stop playback and exit the application.
-Server Application (server.cpp)
-The server application listens for incoming connections from clients, authenticates users, and streams requested songs to clients.
 
-Requirements:
-Windows operating system
-Winsock library
+Compile the code.
+Run the executable.
+Enter username and password.
+Choose a song.
+Press Enter to start playback.
+Press Enter again to stop and exit.
+Server Application (server.cpp):
+
+Listens for client connections, authenticates users, and streams requested songs.
+
 Usage:
-Compile the code with a C++ compiler.
-Run the compiled executable.
-Ensure that the "songs_folder" directory contains the audio files you want to serve.
-Clients can connect to the server using its IP address and port number (default port: 10000).
-Clients must provide valid credentials (username and password) to log in.
-Clients can then select a song from the list provided by the server and start streaming it.
-Note:
-Both client and server applications use the Winsock library for network communication.
-The server-side application authenticates users against a predefined set of credentials.
-The client-side application uses the Miniaudio library for audio playback.
+
+Compile the code.
+Run the executable.
+Ensure "songs_folder" has the audio files.
+Clients connect using IP and port.
+Provide credentials to log in.
+Select a song to stream.
+Notes:
+
+Both use Winsock for networking.
+Server authenticates against a preset list.
+Client uses Miniaudio for playback.
